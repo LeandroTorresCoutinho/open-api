@@ -1,0 +1,215 @@
+openapi: 3.0.2
+info:
+  description: |-
+    Welcome to the discount microservice!
+  version: 1.0-SNAPSHOT
+  title: Discount
+  contact:
+    email: developers@smartetailing.com
+servers:
+  - url: /discount
+tags:
+  - name: management
+    description: Manage discounts
+  - name: checkout
+    description: Calculate discounts in checkout
+paths:
+  /api/{merchantId}/discounts:
+    parameters:
+      - $ref: '#/components/parameters/MerchantId'
+    get:
+      tags:
+        - management
+      summary: Get all discounts for a merchant
+      operationId: getAllDiscounts
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscountList'
+    post:
+      tags:
+        - management
+      summary: Create a new discount
+      operationId: createDiscount
+      requestBody:
+        required: true
+        description: properties of the discount to create
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDiscountRequest'
+      responses:
+        201:
+          description: Successful creation of new discount
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Discount'
+  '/api/{merchantId}/discounts/{discountId}':
+    parameters:
+      - $ref: '#/components/parameters/MerchantId'
+      - name: discountId
+        in: path
+        description: discount ID to operate on
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - management
+      summary: Get a discount by ID
+      operationId: getDiscount
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Discount'
+    patch:
+      tags:
+        - management
+      summary: Update a discount
+      operationId: updateDiscount
+      requestBody:
+        required: true
+        description: updates to apply to the discount
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDiscountRequest'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Discount'
+components:
+  schemas:
+    UpdateDiscountRequest:
+      properties:
+        name:
+          type: string
+          example: Summer sale
+        active:
+          type: boolean
+          example: true
+        startDate:
+          type: string
+          format: date
+          example: 2021-09-20
+        endDate:
+          type: string
+          format: date
+          example: 2021-12-31
+    CreateDiscountRequest:
+      allOf:
+        - type: object
+          required:
+            - name
+            - active
+            - startDate
+            - type
+            - value
+            - excludeSale
+          properties:
+            code:
+              type: string
+              example: SUMMERSALE
+              nullable: true
+            type:
+              $ref: '#/components/schemas/DiscountType'
+            value:
+              type: integer
+              format: int32
+              example: 15
+            excludeSale:
+              type: boolean
+            minimum:
+              $ref: '#/components/schemas/DiscountMinimum'
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Item'
+            brands:
+              type: array
+              items:
+                type: integer
+                format: int32
+            categories:
+              type: array
+              items:
+                type: integer
+                format: int32
+        - $ref: '#/components/schemas/UpdateDiscountRequest'
+    DiscountType:
+      type: string
+      enum:
+        - percentage
+        - fixed amount
+        - free shipping
+        - buy x get y
+    DiscountMinimum:
+      required:
+        - type
+        - value
+      properties:
+        type:
+          type: string
+          enum:
+            - money
+            - quantity
+        value:
+          type: integer
+          format: int32
+          example: 10
+    Item:
+      required:
+        - id
+        - catalog
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 123
+        catalog:
+          type: string
+          enum:
+            - library
+            - merchant
+    Discount:
+      allOf:
+        - type: object
+          required:
+            - id
+            - code # code, brands, and categories are required in the discount response, but not the request
+            - brands
+            - categories
+          properties:
+            id:
+              type: string
+              format: uuid
+        - $ref: '#/components/schemas/CreateDiscountRequest'
+    DiscountList:
+      required:
+        - discounts
+      properties:
+        discounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Discount'
+  parameters:
+    MerchantId:
+      name: merchantId
+      in: path
+      description: merchant ID
+      required: true
+      schema:
+        type: integer
+        format: int64
+        example: 4182
